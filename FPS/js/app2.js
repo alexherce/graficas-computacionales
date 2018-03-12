@@ -1,7 +1,7 @@
 // Physijs required
 
 // Global vars
-var cam, scene, renderer, controls, gun, test, player;
+var cam, scene, renderer, controls, gun, player;
 var t = THREE, mouse = { x: 0, y: 0, z: 0 }, model, skin;
 var runAnim = true, kills = 0, health = 100;
 var healthCube, lastHealthPickup = 0;
@@ -17,11 +17,10 @@ var moveForward = false;
 var moveBackward = false;
 var moveLeft = false;
 var moveRight = false;
-var moveJump = false;
 var canJump = false;
 
 var prevTime = performance.now();
-var velocity, direction;
+// var velocity, direction;
 
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
@@ -103,6 +102,166 @@ function initPointerLock() {
     instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
   }
 }
+
+function PointerLockControls( camera, cannonBody ) {
+
+  var eyeYPos = 2; // eyes are 2 meters above the ground
+  var velocityFactor = 0.2;
+  var jumpVelocity = 20;
+  var scope = this;
+
+  var pitchObject = new THREE.Object3D();
+  pitchObject.add( camera );
+
+  var yawObject = new THREE.Object3D();
+  yawObject.position.y = 2;
+  yawObject.add( pitchObject );
+
+  var quat = new THREE.Quaternion();
+
+  var moveForward = false;
+  var moveBackward = false;
+  var moveLeft = false;
+  var moveRight = false;
+
+  var canJump = false;
+
+  var velocity = cannonBody.getLinearVelocity();
+
+  var PI_2 = Math.PI / 2;
+
+  var onMouseMove = function ( event ) {
+
+    if ( scope.enabled === false ) return;
+
+    var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+    var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+    yawObject.rotation.y -= movementX * 0.002;
+    pitchObject.rotation.x -= movementY * 0.002;
+
+    pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, pitchObject.rotation.x ) );
+  };
+
+  var onKeyDown = function ( event ) {
+
+    switch ( event.keyCode ) {
+
+      case 38: // up
+      case 87: // w
+      moveForward = true;
+      break;
+
+      case 37: // left
+      case 65: // a
+      moveLeft = true;
+      break;
+
+      case 40: // down
+      case 83: // s
+      moveBackward = true;
+      break;
+
+      case 39: // right
+      case 68: // d
+      moveRight = true;
+      break;
+
+      case 32: // space
+      if ( canJump === true ){
+        velocity.y = jumpVelocity;
+      }
+      canJump = false;
+      break;
+    }
+
+  };
+
+  var onKeyUp = function ( event ) {
+
+    switch( event.keyCode ) {
+
+      case 38: // up
+      case 87: // w
+      moveForward = false;
+      break;
+
+      case 37: // left
+      case 65: // a
+      moveLeft = false;
+      break;
+
+      case 40: // down
+      case 83: // a
+      moveBackward = false;
+      break;
+
+      case 39: // right
+      case 68: // d
+      moveRight = false;
+      break;
+
+    }
+
+  };
+
+  document.addEventListener( 'mousemove', onMouseMove, false );
+  document.addEventListener( 'keydown', onKeyDown, false );
+  document.addEventListener( 'keyup', onKeyUp, false );
+
+  this.enabled = false;
+
+  this.getObject = function () {
+    return yawObject;
+  };
+
+  this.getDirection = function(targetVec){
+    targetVec.set(0,0,-1);
+    quat.multiplyVector3(targetVec);
+  }
+
+  // Moves the camera to the Cannon.js object position and adds velocity to the object if the run key is down
+  var inputVelocity = new THREE.Vector3();
+  var euler = new THREE.Euler();
+
+  this.update = function() {
+
+    var time = performance.now();
+    var delta = ( time - prevTime ) / 1000;
+
+    if ( scope.enabled === false ) return;
+
+    inputVelocity.set(0,0,0);
+
+    if ( moveForward ){
+      inputVelocity.z = -velocityFactor * delta;
+    }
+    if ( moveBackward ){
+      inputVelocity.z = velocityFactor * delta;
+    }
+
+    if ( moveLeft ){
+      inputVelocity.x = -velocityFactor * delta;
+    }
+    if ( moveRight ){
+      inputVelocity.x = velocityFactor * delta;
+    }
+
+    // Convert velocity to world coordinates
+    euler.x = pitchObject.rotation.x;
+    euler.y = yawObject.rotation.y;
+    euler.order = "XYZ";
+    quat.setFromEuler(euler);
+    inputVelocity.applyQuaternion(quat);
+    //quat.multiplyVector3(inputVelocity);
+
+    // Add to the object
+    velocity.x += inputVelocity.x;
+    velocity.z += inputVelocity.z;
+
+    yawObject.position.copy(cannonBody.position);
+  };
+};
 
 function crosshair(camera) {
 
@@ -311,8 +470,8 @@ function init(canvas) {
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-  velocity = new THREE.Vector3();
-  direction = new THREE.Vector3();
+  // velocity = new THREE.Vector3();
+  // direction = new THREE.Vector3();
 
   blocker = document.getElementById( 'blocker' );
   instructions = document.getElementById( 'instructions' );
@@ -322,20 +481,19 @@ function init(canvas) {
   crosshair(cam);
   gun(cam);
 
-  var playerGeometry = new t.SphereGeometry(2, 6, 6);
-  var playerMaterial = new t.MeshBasicMaterial({wireframe: true});
-  player = new Physijs.SphereMesh(playerGeometry, playerMaterial, 1);
+  var sphereGeo = new t.SphereGeometry(2, 6, 6);
+  player = new Physijs.SphereMesh(sphereGeo, new THREE.MeshBasicMaterial({wireframe: true}), 1);
   player.position.set(0,20,0);
-  player.rotation.set(0, Math.PI, 0);
-  player.setLinearVelocity(0,0,0);
   scene.add(player);
+  player.setLinearVelocity(0,0,0);
 
-  controls = new THREE.PointerLockControls( cam );
+  // controls = new THREE.PointerLockControls( cam );
+  controls = new PointerLockControls(cam, player);
   controls.getObject().position.set(0,20,0);
   scene.add(controls.getObject());
 
-  document.addEventListener( 'keydown', onKeyDown, false );
-  document.addEventListener( 'keyup', onKeyUp, false );
+  // document.addEventListener( 'keydown', onKeyDown, false );
+  // document.addEventListener( 'keyup', onKeyUp, false );
 
   // Raycaster( origin, direction, near, far )
   // origin — The origin vector where the ray casts from.
@@ -664,59 +822,65 @@ function getRandBetween(min, max) {
   return parseInt(Math.floor(Math.random() * (max - min + 1)) + min, 10);
 }
 
-function run() {
-  if ( controlsEnabled === true ) {
-    raycaster.ray.origin.copy( controls.getObject().position );
-    raycaster.ray.origin.y -= 10;
-
-    var intersections = raycaster.intersectObjects( objects );
-
-    var onObject = intersections.length > 0;
-
-    var time = performance.now();
-    var delta = ( time - prevTime ) / 1000;
-
-    velocity.x -= velocity.x * 10.0 * delta;
-    velocity.z -= velocity.z * 10.0 * delta;
-    velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
-
-    direction.z = Number( moveForward ) - Number( moveBackward );
-    direction.x = Number( moveLeft ) - Number( moveRight );
-    direction.y = Number( moveJump );
-    direction.normalize(); // this ensures consistent movements in all directions
-
-    if ( moveForward || moveBackward ) {
-      velocity.z -= direction.z * 500.0;
-    }
-
-    if ( moveLeft || moveRight ) {
-      velocity.x -= direction.x * 500.0;
-    }
-
-    if ( onObject === true ) {
-      velocity.y = Math.max( 0, velocity.y );
-      canJump = true;
-    }
-
-    player.rotation.copy(controls.getObject().rotation);
-    player.setLinearVelocity(new THREE.Vector3(velocity.x * delta, 0 * delta, velocity.z * delta));
-    controls.getObject().position.copy(player.position);
-
-    // if ( controls.getObject().position.y < 10 ) {
-    //   velocity.y = 0;
-    //   controls.getObject().position.y = 10;
-    //   canJump = true;
-    // }
-    prevTime = time;
-  }
-}
+// function run() {
+//   if ( controlsEnabled === true ) {
+//     raycaster.ray.origin.copy( controls.getObject().position );
+//     raycaster.ray.origin.y -= 10;
+//
+//     var intersections = raycaster.intersectObjects( objects );
+//
+//     var onObject = intersections.length > 0;
+//
+//     var time = performance.now();
+//     var delta = ( time - prevTime ) / 1000;
+//
+//     velocity.x -= velocity.x * 10.0 * delta;
+//     velocity.z -= velocity.z * 10.0 * delta;
+//     velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+//
+//     direction.z = Number( moveForward ) - Number( moveBackward );
+//     direction.x = Number( moveLeft ) - Number( moveRight );
+//     direction.normalize(); // this ensures consistent movements in all directions
+//
+//     if ( moveForward || moveBackward ) {
+//       velocity.z -= direction.z * 500.0 * delta;
+//       if (checkWallCollision(controls.getObject().position)) {
+//         velocity.z -= direction.z * 500.0 * -delta * 10;
+//       }
+//     }
+//
+//     if ( moveLeft || moveRight ) {
+//       velocity.x -= direction.x * 500.0 * delta;
+//       if (checkWallCollision(controls.getObject().position)) {
+//         velocity.x -= direction.x * 500.0 * -delta * 10;
+//       }
+//     }
+//
+//     if ( onObject === true ) {
+//       velocity.y = Math.max( 0, velocity.y );
+//       canJump = true;
+//     }
+//
+//     controls.getObject().translateX( velocity.x * delta );
+//     controls.getObject().translateY( velocity.y * delta );
+//     controls.getObject().translateZ( velocity.z * delta );
+//
+//     if ( controls.getObject().position.y < 10 ) {
+//       velocity.y = 0;
+//       controls.getObject().position.y = 10;
+//       canJump = true;
+//     }
+//     prevTime = time;
+//   }
+// }
 
 function animate() {
   if(controlsEnabled) render();
+  // run();
   if (controlsEnabled) {
-    run();
     scene.simulate(); // run physics
   }
+  controls.update();
   renderer.render( scene, cam );
   requestAnimationFrame(animate);
 }
