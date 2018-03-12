@@ -320,15 +320,6 @@ function init(canvas) {
 
   // Artificial Intelligence
   setupAI();
-
-  // Shoot on click
-  // $(document).click(function(e) {
-  // 	e.preventDefault;
-  // 	if (e.which === 1) { // Left click only
-  // 		shootBullet();
-  // 	}
-  // });
-
 }
 
 // Update and display
