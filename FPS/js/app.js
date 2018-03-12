@@ -1,7 +1,5 @@
-// Physijs required
-
 // Global vars
-var cam, scene, renderer, controls, gun, test, player;
+var cam, scene, renderer, controls, gun;
 var t = THREE, mouse = { x: 0, y: 0, z: 0 }, model, skin;
 var runAnim = true, kills = 0, health = 100;
 var healthCube, lastHealthPickup = 0;
@@ -17,7 +15,6 @@ var moveForward = false;
 var moveBackward = false;
 var moveLeft = false;
 var moveRight = false;
-var moveJump = false;
 var canJump = false;
 
 var prevTime = performance.now();
@@ -59,7 +56,6 @@ function initPointerLock() {
 
         controlsEnabled = true;
         controls.enabled = true;
-        scene.onSimulationResume();
 
         blocker.style.display = 'none';
 
@@ -269,9 +265,9 @@ function onKeyUp( event ) {
 }
 
 function onDocumentMouseMove(e) {
-  e.preventDefault();
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+	e.preventDefault();
+	mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+	mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
   mouse.z = 0.5;
 }
 
@@ -282,25 +278,9 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
-function collisionDetection(obj, otherObject, relativeVelocity, relativeRotation, contactNormal) {
-  if(obj.name == "bullet" && otherObject.name == "wall") {
-    scene.remove(obj);
-  }
-
-  if(obj.name == "bullet" && otherObject.name == "floor") {
-    scene.remove(obj);
-  }
-
-  if(obj.name == "bullet" && otherObject.name == "enemy") {
-    scene.remove(obj);
-    console.log("bullet hit enemy");
-  }
-}
-
 // Setup
 function init(canvas) {
-  scene = new Physijs.Scene;
-  scene.setGravity(new THREE.Vector3( 0, -30, 0 ));
+  scene = new t.Scene(); // Holds all objects in the canvas
   scene.background = new THREE.Color( 0xffffff );
   scene.fog = new THREE.Fog( 0xffffff, 0, 290 );
 
@@ -322,17 +302,8 @@ function init(canvas) {
   crosshair(cam);
   gun(cam);
 
-  var playerGeometry = new t.SphereGeometry(2, 6, 6);
-  var playerMaterial = new t.MeshBasicMaterial({wireframe: true});
-  player = new Physijs.SphereMesh(playerGeometry, playerMaterial, 1);
-  player.position.set(0,20,0);
-  player.rotation.set(0, Math.PI, 0);
-  player.setLinearVelocity(0,0,0);
-  scene.add(player);
-
   controls = new THREE.PointerLockControls( cam );
-  controls.getObject().position.set(0,20,0);
-  scene.add(controls.getObject());
+  scene.add( controls.getObject() );
 
   document.addEventListener( 'keydown', onKeyDown, false );
   document.addEventListener( 'keyup', onKeyUp, false );
@@ -369,65 +340,65 @@ function render() {
   var aispeed = delta * MOVESPEED;
 
   // --- Update bullets ---
-  // for (var i = bullets.length-1; i >= 0; i--) {
-  //   var b = bullets[i], p = b.position, d = b.ray.direction;
-  //
-  //   // Collide with walls
-  //   if (checkWallCollision(p)) {
-  //     bullets.splice(i, 1);
-  //     scene.remove(b);
-  //     continue;
-  //   }
-  //
-  //   // Collide with AI
-  //   var hit = false;
-  //   for (var j = ai.length-1; j >= 0; j--) {
-  //     var a = ai[j];
-  //     var v = a.geometry.vertices[0];
-  //     var c = a.position;
-  //     var x = Math.abs(v.x), z = Math.abs(v.z);
-  //
-  //     if (p.x < c.x + x && p.x > c.x - x && p.z < c.z + z && p.z > c.z - z && b.owner != a) {
-  //       bullets.splice(i, 1);
-  //       scene.remove(b);
-  //       a.health -= PROJECTILEDAMAGE;
-  //       var color = a.material.color, percent = a.health / 100;
-  //       a.material.color.setRGB(percent * color.r, percent * color.g, percent * color.b);
-  //       hit = true;
-  //       break;
-  //     }
-  //   }
-  //
-  //   // Bullet hits player
-  //   if (distance(p.x, p.z, controls.getObject().position.x, controls.getObject().position.z) < 25 && b.owner != controls.getObject()) {
-  //     // health -= 10;
-  //     console.log("Bullet hits player: " + distance(p.x, p.z, controls.getObject().position.x, controls.getObject().position.z));
-  //     if (health < 0) health = 0;
-  //     bullets.splice(i, 1);
-  //     scene.remove(b);
-  //   }
-  //
-  //   // Move bullet if it hasn't hit anything
-  //   if (!hit) {
-  //     if(b.owner != controls.getObject()) {
-  //       // Enemy shot bullets
-  //       b.translateX(enemySpeed * d.x);
-  //       b.translateZ(enemySpeed * d.z);
-  //       b.translateY(enemySpeed * d.y);
-  //     } else {
-  //       // User shot bullets
-  //       b.translateX(userSpeed * d.x);
-  //       b.translateZ(userSpeed * d.z);
-  //       b.translateY(userSpeed * d.y);
-  //     }
-  //   }
-  //
-  //   // Remove bullets shot to the sky or ground
-  //   if(b.position.y > 60 || b.position.y < -5) {
-  //     bullets.splice(i, 1);
-  //     scene.remove(b);
-  //   }
-  // }
+  for (var i = bullets.length-1; i >= 0; i--) {
+    var b = bullets[i], p = b.position, d = b.ray.direction;
+
+    // Collide with walls
+    if (checkWallCollision(p)) {
+      bullets.splice(i, 1);
+      scene.remove(b);
+      continue;
+    }
+
+    // Collide with AI
+    var hit = false;
+    for (var j = ai.length-1; j >= 0; j--) {
+      var a = ai[j];
+      var v = a.geometry.vertices[0];
+      var c = a.position;
+      var x = Math.abs(v.x), z = Math.abs(v.z);
+
+      if (p.x < c.x + x && p.x > c.x - x && p.z < c.z + z && p.z > c.z - z && b.owner != a) {
+        bullets.splice(i, 1);
+        scene.remove(b);
+        a.health -= PROJECTILEDAMAGE;
+        var color = a.material.color, percent = a.health / 100;
+        a.material.color.setRGB(percent * color.r, percent * color.g, percent * color.b);
+        hit = true;
+        break;
+      }
+    }
+
+    // Bullet hits player
+    if (distance(p.x, p.z, controls.getObject().position.x, controls.getObject().position.z) < 25 && b.owner != controls.getObject()) {
+      // health -= 10;
+      console.log("Bullet hits player: " + distance(p.x, p.z, controls.getObject().position.x, controls.getObject().position.z));
+      if (health < 0) health = 0;
+      bullets.splice(i, 1);
+      scene.remove(b);
+    }
+
+    // Move bullet if it hasn't hit anything
+    if (!hit) {
+      if(b.owner != controls.getObject()) {
+        // Enemy shot bullets
+        b.translateX(enemySpeed * d.x);
+        b.translateZ(enemySpeed * d.z);
+        b.translateY(enemySpeed * d.y);
+      } else {
+        // User shot bullets
+        b.translateX(userSpeed * d.x);
+        b.translateZ(userSpeed * d.z);
+        b.translateY(userSpeed * d.y);
+      }
+    }
+
+    // Remove bullets shot to the sky or ground
+    if(b.position.y > 60 || b.position.y < -5) {
+      bullets.splice(i, 1);
+      scene.remove(b);
+    }
+  }
 
   // --- Update AI ---
   for (var i = ai.length-1; i >= 0; i--) {
@@ -484,23 +455,12 @@ function setupScene() {
   var units = mapW;
 
   // Geometry: floor
-
-  // var floor = new t.Mesh(
-  //   new t.PlaneGeometry(units * UNITSIZE, units * UNITSIZE, 100, 100),
-  //   new t.MeshLambertMaterial({color: 0xEDCBA0})
-  // );
-  //
-  // floor.rotation.x = -Math.PI / 2;
-  // scene.add(floor);
-  var floor = new Physijs.BoxMesh(
-    new t.CubeGeometry(units * UNITSIZE, 1, units * UNITSIZE),
-    new t.MeshLambertMaterial({color: 0xEDCBA0}),
-    0
+  var floor = new t.Mesh(
+    new t.PlaneGeometry(units * UNITSIZE, units * UNITSIZE, 100, 100),
+    new t.MeshLambertMaterial({color: 0xEDCBA0})
   );
-  floor.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
-    collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
-  });
-  floor.name = "floor";
+
+  floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
   // Geometry: walls
@@ -514,14 +474,10 @@ function setupScene() {
   for (var i = 0; i < mapW; i++) {
     for (var j = 0, m = map[i].length; j < m; j++) {
       if (map[i][j]) {
-        var wall = new Physijs.BoxMesh(cube, materials[map[i][j]-1], 0);
+        var wall = new t.Mesh(cube, materials[map[i][j]-1]);
         wall.position.x = (i - units/2) * UNITSIZE;
         wall.position.y = WALLHEIGHT/2;
         wall.position.z = (j - units/2) * UNITSIZE;
-        wall.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
-          collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
-        });
-        wall.name = "wall";
         scene.add(wall);
       }
     }
@@ -562,7 +518,6 @@ function addAI() {
   o.lastRandomX = Math.random();
   o.lastRandomZ = Math.random();
   o.lastShot = Date.now();
-  o.name = "enemy";
   ai.push(o);
   scene.add(o);
 }
@@ -607,57 +562,39 @@ var sphereMaterial = new t.MeshBasicMaterial({color: 0x333333});
 
 function shootBullet(obj) {
   var isPlayer = false;
-  var pos = new THREE.Vector3();
-  if (obj === undefined) {
-    obj = controls.getObject();
+	if (obj === undefined) {
+		obj = controls.getObject();
     isPlayer = true;
-  }
+	}
 
-  if (isPlayer) {
+	if (isPlayer) {
     var sphereGeo = new t.SphereGeometry(1, 6, 6);
 
     var gunPosVector = new t.Vector3();
     gunPosVector.setFromMatrixPosition(cam.getObjectByName("gun").getObjectByName("muzzle").matrixWorld);
 
-    var sphere = new Physijs.SphereMesh(sphereGeo, sphereMaterial, 0.1);
+    var sphere = new t.Mesh(sphereGeo, sphereMaterial);
+    sphere.position.set(gunPosVector.x, gunPosVector.y, gunPosVector.z);
 
-    var vector = new t.Vector3(mouse.x, mouse.y, 1);
-    vector.unproject(cam);
-    sphere.ray = new t.Ray(obj.position, vector.sub(obj.position).normalize());
-
-    sphere.position.copy(sphere.ray.direction);
-    sphere.position.add(gunPosVector);
-  } else {
+		var vector = new t.Vector3(mouse.x, mouse.y, 1);
+		vector.unproject(cam);
+		sphere.ray = new t.Ray(obj.position, vector.sub(obj.position).normalize());
+	}
+	else {
     var sphereGeo = new t.SphereGeometry(2, 6, 6);
 
-    var sphere = new Physijs.SphereMesh(sphereGeo, sphereMaterial, 0.1);
+    var sphere = new t.Mesh(sphereGeo, sphereMaterial);
+    sphere.position.set(obj.position.x, obj.position.y * 0.8, obj.position.z);
 
-    var vector = controls.getObject().position.clone();
-    sphere.ray = new t.Ray(obj.position, vector.sub(obj.position).normalize());
+		var vector = controls.getObject().position.clone();
+		sphere.ray = new t.Ray(obj.position, vector.sub(obj.position).normalize());
+	}
+	sphere.owner = obj;
 
-    sphere.position.copy(sphere.ray.direction);
-    sphere.position.add(new THREE.Vector3(obj.position.x, obj.position.y * 0.8, obj.position.z));
-  }
-  sphere.owner = obj;
+	bullets.push(sphere);
+	scene.add(sphere);
 
-  sphere.name = "bullet";
-
-  sphere.setCcdMotionThreshold(1);
-  sphere.setCcdSweptSphereRadius(0.2);
-
-  sphere.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
-    collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
-  });
-
-  bullets.push(sphere);
-  scene.add(sphere);
-
-  pos.copy(sphere.ray.direction);
-  if(isPlayer) pos.multiplyScalar(800);
-  else pos.multiplyScalar(200);
-  sphere.setLinearVelocity(new THREE.Vector3(pos.x, pos.y, pos.z));
-
-  return sphere;
+	return sphere;
 }
 
 function getRandBetween(min, max) {
@@ -682,15 +619,20 @@ function run() {
 
     direction.z = Number( moveForward ) - Number( moveBackward );
     direction.x = Number( moveLeft ) - Number( moveRight );
-    direction.y = Number( moveJump );
     direction.normalize(); // this ensures consistent movements in all directions
 
     if ( moveForward || moveBackward ) {
-      velocity.z -= direction.z * 500.0;
+      velocity.z -= direction.z * 500.0 * delta;
+      if (checkWallCollision(controls.getObject().position)) {
+        velocity.z -= direction.z * 500.0 * -delta * 10;
+      }
     }
 
     if ( moveLeft || moveRight ) {
-      velocity.x -= direction.x * 500.0;
+      velocity.x -= direction.x * 500.0 * delta;
+      if (checkWallCollision(controls.getObject().position)) {
+        velocity.x -= direction.x * 500.0 * -delta * 10;
+      }
     }
 
     if ( onObject === true ) {
@@ -698,25 +640,26 @@ function run() {
       canJump = true;
     }
 
-    player.rotation.copy(controls.getObject().rotation);
-    player.setLinearVelocity(new THREE.Vector3(velocity.x * delta, 0 * delta, velocity.z * delta));
-    controls.getObject().position.copy(player.position);
+    controls.getObject().translateX( velocity.x * delta );
+    controls.getObject().translateY( velocity.y * delta );
+    controls.getObject().translateZ( velocity.z * delta );
 
-    // if ( controls.getObject().position.y < 10 ) {
-    //   velocity.y = 0;
-    //   controls.getObject().position.y = 10;
-    //   canJump = true;
-    // }
+    if ( controls.getObject().position.y < 10 ) {
+      velocity.y = 0;
+      controls.getObject().position.y = 10;
+      canJump = true;
+    }
     prevTime = time;
   }
 }
 
 function animate() {
-  if(controlsEnabled) render();
-  if (controlsEnabled) {
-    run();
-    scene.simulate(); // run physics
+  if (runAnim) {
+    requestAnimationFrame(animate);
   }
+  if(controlsEnabled) render();
+
+  run();
+
   renderer.render( scene, cam );
-  requestAnimationFrame(animate);
 }
