@@ -298,48 +298,6 @@ function setupWorld() {
   scene.add( directionalLight2 );
 }
 
-function loadMap() {
-  new THREE.MTLLoader()
-  .load('assets/cs_office.mtl', function ( materials ) {
-
-    materials.preload();
-    console.log(materials);
-
-    new THREE.OBJLoader()
-    .setMaterials( materials )
-    .load( 'assets/cs_office.obj', function ( object ) {
-      console.log(object);
-
-      var geometries = [];
-
-      object.traverse(function ( child ) {
-        if ( child.geometry !== undefined ) {
-
-          geometries.push(new THREE.Geometry().fromBufferGeometry( child.geometry ));
-        }
-      });
-
-      console.log(geometries);
-
-      var _materials=[];
-      for ( var i = 0; i < materials.materials.length ;i ++ ) {
-        var materialv = Physijs.createMaterial(materials.materials[i],0.8,0.1);
-        _materials.push(materialv)
-      }
-
-      // mesh = new Physijs.ConcaveMesh(object, materials);
-
-      var material = new THREE.MeshBasicMaterial({color: 0xff0000});
-      var mesh = new Physijs.ConcaveMesh( object, material);
-
-      // object.position.y = - 95;
-      scene.add( mesh );
-      // scene.add( object );
-
-    });
-  } );
-}
-
 function initScene() {
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
   var audioContext = new AudioContext();
