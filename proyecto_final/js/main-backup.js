@@ -1,0 +1,295 @@
+'use strict';
+
+Physijs.scripts.worker =   './js/physijs_worker.js';
+Physijs.scripts.ammo =     'ammo.js';
+
+var initScene, render, renderer, scene, camera, cubeCamera, box, directionalLight,
+player, controls, guiparams, container, door, mat1;
+
+var wireMat = new THREE.MeshBasicMaterial({ color: 0x888888, wireframe: true });;
+
+var pbox, dbox;
+
+var doorParams = {};
+
+var loader;
+
+initScene = function() {
+  window.AudioContext = window.AudioContext || window.webkitAudioContext;
+  var audioContext = new AudioContext();
+
+  // FIX AUDIO FOR CHROME
+  document.addEventListener('click', function() {
+    audioContext.resume().then(() => {
+      console.log('Playback resumed successfully');
+    });
+  });
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  container = document.getElementById( 'webGL' )
+  container.appendChild( renderer.domElement );
+
+  scene = new Physijs.Scene;
+  scene.setGravity(new THREE.Vector3(0,-300 * 3,0));
+
+  scene.fog = new THREE.Fog( 0xffffff, 5400, 5400);
+  scene.fog.color.setHSL( 0.51, 0.6, 0.6 );
+
+  // Physics worker thread
+  // This updates on different clock
+
+  scene.addEventListener(
+    'update',
+    function() {
+      var dt = clock.getDelta();
+      if (dt > 0.05) dt = 0.05;
+      scene.simulate(undefined, 2);
+      //scene.simulate(null,1);
+      controls.updatePhys(dt);
+    }
+  );
+
+  camera =  new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
+  camera.position.set(0, 67, 0);
+  camera.lookAt(scene.position);
+
+  var light = new THREE.AmbientLight( 0x404040 ); // soft white light
+  scene.add( light );
+
+  /*load player colider*/
+  player = new Physijs.CapsuleMesh(
+    createCapsule(10, 40),
+    Physijs.createMaterial(
+      new THREE.MeshBasicMaterial({wireframe: true}),
+      2, // friction
+      0 // restitution
+    )
+  );
+
+  player.material.visible = false;
+  player.position.y = 50;
+  player.position.x = 150;
+  player.add(camera);
+  scene.add(player);
+  player.setAngularFactor(new THREE.Vector3(0,0,0));
+
+  /*add controls*/
+  controls = new THREE.PhysicsFirstPersonControls(player);
+  controls.setAudioContext(audioContext).startOn(container, false);
+
+  // CUBE CAMERA
+
+  cubeCamera = new THREE.CubeCamera( 1, 100000, 512 );
+  scene.add( cubeCamera );
+  cubeCamera.renderTarget.texture.format = THREE.RGBFormat;
+
+  // MATERIALS
+
+  var repeat = 10;
+
+  var texture = new THREE.TextureLoader().load( "models/pebbles01.jpg" );
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set( repeat, repeat );
+
+  var texture1 = new THREE.TextureLoader().load( "models/pebbles02.jpg" );
+  texture1.wrapS = THREE.RepeatWrapping;
+  texture1.wrapT = THREE.RepeatWrapping;
+  texture1.repeat.set( repeat, repeat );
+
+  var texture2 = new THREE.TextureLoader().load( "models/pebbles03.jpg" );
+  texture2.wrapS = THREE.RepeatWrapping;
+  texture2.wrapT = THREE.RepeatWrapping;
+  texture2.repeat.set( repeat, repeat );
+
+
+  mat1 = new THREE.MeshPhongMaterial( {
+    color: 0x00ffff,
+    specular:0xff0000,
+    shininess: 1,
+    bumpMap: texture1,
+    specularMap : texture2,
+    depthWrite: false,
+    envMap: cubeCamera.renderTarget,
+    combine: THREE.MixOperation,
+    reflectivity: 1
+  } );
+
+  // Box
+  box = new Physijs.BoxMesh(
+    new THREE.CubeGeometry( 1500, 1, 1500 ),
+    Physijs.createMaterial( mat1, 4, 0.5 ),
+    0
+  );
+
+  box.geometry.name = "foo";
+
+  box.position.y = -10;
+  scene.add( box );
+
+  loader = new THREE.SEA3D();
+
+  loader.onComplete = function( e ) {
+    doorParams.anim = loader.meshes[0];
+
+    var box = new THREE.BoxGeometry(
+      doorParams.anim.geometry.boundingBox.max.x - doorParams.anim.geometry.boundingBox.min.x,
+      doorParams.anim.geometry.boundingBox.max.y - doorParams.anim.geometry.boundingBox.min.y,
+      doorParams.anim.geometry.boundingBox.max.z - doorParams.anim.geometry.boundingBox.min.z
+    );
+
+    //console.log(doorParams.anim);
+
+    //doorParams.block = new Physijs.BoxMesh(new THREE.BoxGeometry(20, 100 ,50), wireMat, 10);
+    doorParams.block = new Physijs.BoxMesh(box, wireMat, 0);
+
+    // finetunung
+    doorParams.block.position.x = doorParams.anim.position.x + (doorParams.anim.position.x * .025);
+    doorParams.block.position.y = doorParams.anim.position.y + (doorParams.anim.position.x * .45);
+    doorParams.block.position.z = doorParams.anim.position.z + (doorParams.anim.position.x * .2);
+
+    door = new Door(doorParams)
+    .setkey(controls.actionKey);
+    controls.useableMeshes.push(doorParams.anim);
+    //console.log(door);
+  };
+
+  loader.load( './models/door.sea' );
+
+  scene.simulate(); // run physics
+  requestAnimationFrame( render );
+};
+
+var clock = new THREE.Clock();
+
+render = function() {
+
+  requestAnimationFrame( render );
+
+  var delta = clock.getDelta();
+
+  //		mat1.normalScale = {
+  //			x: Math.sin(clock.getElapsedTime() / Math.PI * 10),
+  //			y: Math.sin(clock.getElapsedTime() / Math.PI * 2)
+  //
+  //		}
+
+  // Update SEA3D Animations
+  THREE.SEA3D.AnimationHandler.update( delta );
+
+  // Update Three.JS Animations
+  THREE.AnimationHandler.update( delta );
+
+  cubeCamera.position.copy( {x:player.position.x, y:-67 - player.position.y  , z:player.position.z} );
+
+  // render scene
+  box.visible = false;
+  cubeCamera.updateCubeMap( renderer, scene );
+  box.visible = true;
+
+  renderer.render( scene, camera); // render the scene
+
+};
+
+window.onload = initScene;
+
+function createCapsule(width, height) {
+
+  var merged = new THREE.Geometry(),
+  cyl = new THREE.CylinderGeometry(width, width, height, 10),
+  top = new THREE.SphereGeometry(width, 10, 10),
+  bot = new THREE.SphereGeometry(width, 10, 10),
+  matrix = new THREE.Matrix4();
+
+  matrix.makeTranslation(0, -(height - width), 0);
+  bot.applyMatrix(matrix);
+  matrix.makeTranslation(0, (height - width), 0);
+  top.applyMatrix(matrix);
+  // merge to create a capsule
+  merged.merge(top);
+  merged.merge(bot);
+  merged.merge(cyl);
+
+  return merged;
+}
+
+//{field: THREE.mesh, knob: THREE.mesh, anim: sea3d.mesh}
+var Door = function(params) {
+  this.params = params;
+  this.distance = 130;
+  this.closed = true;
+  this.closeEnough;
+  this.key = ""
+
+  scene.add(params.anim);
+  scene.add(params.block);
+
+  this.setSplash();
+
+  var context = this;
+
+  var triger = function() {
+
+    if (!context.closeEnough) return;
+
+    if (context.closed) {
+
+      params.anim.animation.play("otvaranje", .1);
+      scene.remove(params.block);
+
+    } else {
+
+      params.anim.animation.play("zatvaranje", .1);
+      scene.add(params.block);
+
+    }
+
+    context.closed = !context.closed;
+
+  }
+
+  var findDistance = function(e) {
+    //console.log(e.detail.firstFrontMesh);
+
+    if (e.detail.firstFrontMesh === context.params.anim &&
+      e.detail.distanceFront <= context.distance) {
+
+        context.closeEnough = true;
+        context.splash.style.display = "block";
+
+      } else {
+
+        context.closeEnough = false;
+        context.splash.style.display = "none";
+
+      }
+
+    }
+    document.addEventListener("playerActionPerformed", triger, false);
+    document.addEventListener("distance", findDistance, false);
+  }
+
+  Door.prototype.setSplash = function() {
+    this.splash = document.createElement("div");
+    this.splash.setAttribute("class", "doorSplash");
+    this.splash.textContent = ("Press " + this.key.toUpperCase());
+    this.splash.style.display = "none";
+    this.splash.style.position = "absolute";
+    this.splash.style.top =
+    this.splash.style.bottom =
+    this.splash.style.left =
+    this.splash.style.right = 0;
+    this.splash.style.color = "orange";
+    container.appendChild(this.splash);
+  }
+
+  Door.prototype.moveTo = function( x, y, z ){
+
+  }
+
+  Door.prototype.setkey = function( key ){
+    this.key = key;     //set key
+    this.setSplash();   //refresh splash
+    return this;
+  }
