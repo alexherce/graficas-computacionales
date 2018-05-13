@@ -19,18 +19,23 @@ var animations_zombie = [];
 
 // Load animations
 var zombie_loader = new THREE.FBXLoader();
-zombie_loader.load( 'assets/zombieIdle.FBX', function ( object ) {
-  animations_zombie.push(object.animations[ 0 ]);
+zombie_loader.load( 'assets/Zombie_Idle.FBX', function ( object ) {
+  animations_zombie.push(object.animations[ 1 ]);
 
 });
-zombie_loader.load( 'assets/zombieAttack.FBX', function ( object ) {
+zombie_loader.load( 'assets/Zombie_Attack.FBX', function ( object ) {
 
-  animations_zombie.push(object.animations[ 0 ]);
+  animations_zombie.push(object.animations[ 1 ]);
 
 });
-zombie_loader.load( 'assets/zombieDeath.FBX', function ( object ) {
+zombie_loader.load( 'assets/Zombie_Death.FBX', function ( object ) {
 
-  animations_zombie.push(object.animations[ 0 ]);
+  animations_zombie.push(object.animations[ 1 ]);
+
+});
+zombie_loader.load( 'assets/Zombie_Running.FBX', function ( object ) {
+
+  animations_zombie.push(object.animations[ 1 ]);
 
 });
 
@@ -60,7 +65,7 @@ PROJECTILEDAMAGE = 20;
 
 function create_zombie() {
 
-  zombie_loader.load( 'assets/zombieWalk.FBX', function ( object ) {
+  zombie_loader.load( 'assets/Zombie2_Walk.FBX', function ( object ) {
 
     model = object;
     object.mixer = new THREE.AnimationMixer( object );
@@ -73,40 +78,22 @@ function create_zombie() {
 
     /*
       Action 0: Walk
-      Action 1: Death
-      Action 2: Attack
-      Action 3: Idle
+      Action 1: Nothing
+      Action 2: Idle
+      Action 3: Attack
+      Action 4: Death
+      Action 5: Running
     */
-    var action = model.mixer.clipAction( object.animations[ 1 ] );
+    var action = model.mixer.clipAction( object.animations[ 0 ] );
     action.play();
 
-    var textureLoader = new THREE.TextureLoader();
-    textureLoader.setCrossOrigin("anonymous");
-    textureLoader.load("assets/Zombie.png", function (texture) {
-
-    object.traverse( function ( child ) {
-
-      if ( child.isMesh ) {
-
-        child.castShadow = true;
-        child.receiveShadow = true;
-        child.material.map = texture
-        child.material.needsUpdate = true;
-
-      }
-
-      } );
-
-    model.scale.x = 0.007;
-    model.scale.y = 0.007;
-    model.scale.z = 0.007;
+    model.scale.x = 0.25;
+    model.scale.y = 0.25;
+    model.scale.z = 0.25;
 
     scene.add( object );
 
-      } );
-
-  });
-
+      });
 }
 
 function crosshair(camera) {
