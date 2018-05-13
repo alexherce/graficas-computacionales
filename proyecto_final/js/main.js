@@ -19,11 +19,32 @@ var animations_zombie = [];
 
 // Load animations
 var zombie_loader = new THREE.FBXLoader();
+<<<<<<< HEAD
 zombie_loader.load( 'assets/ZombieVintage.FBX', function ( object ) {
   animations_zombie.push(object.animations[ 0 ]);
 });
 zombie_loader.load( 'assets/ZombieVintageAttack.FBX', function ( object ) {
   animations_zombie.push(object.animations[ 1 ]);
+=======
+zombie_loader.load( 'assets/Zombie_Idle.FBX', function ( object ) {
+  animations_zombie.push(object.animations[ 1 ]);
+
+});
+zombie_loader.load( 'assets/Zombie_Attack.FBX', function ( object ) {
+
+  animations_zombie.push(object.animations[ 1 ]);
+
+});
+zombie_loader.load( 'assets/Zombie_Death.FBX', function ( object ) {
+
+  animations_zombie.push(object.animations[ 1 ]);
+
+});
+zombie_loader.load( 'assets/Zombie_Running.FBX', function ( object ) {
+
+  animations_zombie.push(object.animations[ 1 ]);
+
+>>>>>>> 1b588a7552c76fd4b4b7352cb49991580f5833f9
 });
 // zombie_loader.load( 'assets/zombieDeath.FBX', function ( object ) {
 //   animations_zombie.push(object.animations[ 0 ]);
@@ -55,7 +76,11 @@ PROJECTILEDAMAGE = 20;
 
 function create_zombie() {
 
+<<<<<<< HEAD
   zombie_loader.load( 'assets/ZombieVintage.FBX', function ( object ) {
+=======
+  zombie_loader.load( 'assets/Zombie2_Walk.FBX', function ( object ) {
+>>>>>>> 1b588a7552c76fd4b4b7352cb49991580f5833f9
 
     model = object;
     object.mixer = new THREE.AnimationMixer( object );
@@ -66,6 +91,7 @@ function create_zombie() {
       object.animations.push(animations_zombie[i]);
     }
 
+<<<<<<< HEAD
     var action = model.mixer.clipAction(object.animations[ 0 ]);
     action.play();
 
@@ -107,6 +133,26 @@ function create_zombie2() {
   function ( error ) {
     console.log( 'An error happened: ' + error );
   });
+=======
+    /*
+      Action 0: Walk
+      Action 1: Nothing
+      Action 2: Idle
+      Action 3: Attack
+      Action 4: Death
+      Action 5: Running
+    */
+    var action = model.mixer.clipAction( object.animations[ 0 ] );
+    action.play();
+
+    model.scale.x = 0.25;
+    model.scale.y = 0.25;
+    model.scale.z = 0.25;
+
+    scene.add( object );
+
+      });
+>>>>>>> 1b588a7552c76fd4b4b7352cb49991580f5833f9
 }
 
 function crosshair(camera) {
