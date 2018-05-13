@@ -19,20 +19,15 @@ var animations_zombie = [];
 
 // Load animations
 var zombie_loader = new THREE.FBXLoader();
-zombie_loader.load( 'assets/zombieIdle.FBX', function ( object ) {
+zombie_loader.load( 'assets/ZombieVintage.FBX', function ( object ) {
   animations_zombie.push(object.animations[ 0 ]);
-
 });
-zombie_loader.load( 'assets/zombieAttack.FBX', function ( object ) {
-
-  animations_zombie.push(object.animations[ 0 ]);
-
+zombie_loader.load( 'assets/ZombieVintageAttack.FBX', function ( object ) {
+  animations_zombie.push(object.animations[ 1 ]);
 });
-zombie_loader.load( 'assets/zombieDeath.FBX', function ( object ) {
-
-  animations_zombie.push(object.animations[ 0 ]);
-
-});
+// zombie_loader.load( 'assets/zombieDeath.FBX', function ( object ) {
+//   animations_zombie.push(object.animations[ 0 ]);
+// });
 
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
@@ -60,7 +55,7 @@ PROJECTILEDAMAGE = 20;
 
 function create_zombie() {
 
-  zombie_loader.load( 'assets/zombieWalk.FBX', function ( object ) {
+  zombie_loader.load( 'assets/ZombieVintage.FBX', function ( object ) {
 
     model = object;
     object.mixer = new THREE.AnimationMixer( object );
@@ -71,42 +66,47 @@ function create_zombie() {
       object.animations.push(animations_zombie[i]);
     }
 
-    /*
-      Action 0: Walk
-      Action 1: Death
-      Action 2: Attack
-      Action 3: Idle
-    */
-    var action = model.mixer.clipAction( object.animations[ 1 ] );
+    var action = model.mixer.clipAction(object.animations[ 0 ]);
     action.play();
 
-    var textureLoader = new THREE.TextureLoader();
-    textureLoader.setCrossOrigin("anonymous");
-    textureLoader.load("assets/Zombie.png", function (texture) {
+    scene.add( object );
+  });
+}
+
+function create_zombie2() {
+  var loader = new THREE.FBXLoader();
+  loader.load( 'assets/ZombieVintageAttack.fbx', function ( object ) {
+
+    object.mixer = new THREE.AnimationMixer( object );
+    mixers.push( object.mixer );
+
+    for(var i=0; i<animations_zombie.length; i++)
+    {
+      object.animations.push(animations_zombie[i]);
+    }
+
+    var action = object.mixer.clipAction( object.animations[ 2 ] );
+    action.play();
 
     object.traverse( function ( child ) {
-
       if ( child.isMesh ) {
-
         child.castShadow = true;
         child.receiveShadow = true;
-        child.material.map = texture
-        child.material.needsUpdate = true;
-
       }
-
-      } );
-
-    model.scale.x = 0.007;
-    model.scale.y = 0.007;
-    model.scale.z = 0.007;
-
+    });
+    object.position.y=10;
+    object.scale.x = 0.2;
+    object.scale.y = 0.2;
+    object.scale.z = 0.2;
+    console.log(object);
     scene.add( object );
-
-      } );
-
+  }, function ( xhr ) {
+    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+  },
+  // called when loading has errors
+  function ( error ) {
+    console.log( 'An error happened: ' + error );
   });
-
 }
 
 function crosshair(camera) {
@@ -375,8 +375,6 @@ function initScene() {
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
   var audioContext = new AudioContext();
 
-  create_zombie();
-
   // FIX AUDIO FOR CHROME
   document.addEventListener('click', resumeAudioContext(audioContext), false);
 
@@ -388,9 +386,6 @@ function initScene() {
   //Stats
   stats = new Stats();
   container.appendChild( stats.dom );
-
-  // renderer.setPixelRatio( window.devicePixelRatio );
-  // console.log("Pixel ratio: " + window.devicePixelRatio);
 
   window.addEventListener( 'resize', onWindowResize, false );
 
@@ -417,7 +412,7 @@ function initScene() {
 
   document.addEventListener('click', playerShoot, false );
 
-  camera =  new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  camera =  new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
   camera.position.set(0, 17.5, 0);
   camera.lookAt(scene.position);
 
@@ -459,49 +454,35 @@ function initScene() {
   setupWorld();
   // loadMap();
 
+  create_zombie2();
+
   scene.simulate(); // run physics
   requestAnimationFrame( render );
-  requestAnimationFrame( animate );
-};
-
-function render() {
-
-  requestAnimationFrame( render );
-
-  var delta = clock.getDelta();
-
-  cubeCamera.position.copy( {x:player.position.x, y:-67 - player.position.y  , z:player.position.z} );
-
-  // render scene
-  cubeCamera.update( renderer, scene );
-
-  // Zombie animations
-  // if ( mixers.length > 0 ) {
-  //   for ( var i = 0; i < mixers.length; i ++ ) {
-  //     mixers[ i ].update( delta );
-  //   }
-  // }
-
-  renderer.render( scene, camera); // render the scene
-
-  // stats.update();
-
+  // requestAnimationFrame( animate );
 };
 
 function animate() {
 
-  requestAnimationFrame( animate );
-
+  // requestAnimationFrame( animate );
   if ( mixers.length > 0 ) {
     for ( var i = 0; i < mixers.length; i ++ ) {
       mixers[ i ].update( clock.getDelta() );
     }
   }
-
-  renderer.render( scene, camera );
-
   stats.update();
-
 }
+
+function render() {
+
+  requestAnimationFrame( render );
+  var delta = clock.getDelta();
+  cubeCamera.position.copy( {x:player.position.x, y:-67 - player.position.y  , z:player.position.z} );
+
+  // render scene
+  cubeCamera.update( renderer, scene );
+
+  renderer.render( scene, camera); // render the scene
+  animate();
+};
 
 window.onload = initScene;
