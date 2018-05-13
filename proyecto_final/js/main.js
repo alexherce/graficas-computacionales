@@ -4,13 +4,35 @@ Physijs.scripts.worker = './js/physijs_worker.js';
 Physijs.scripts.ammo = 'ammo.js';
 
 var initScene, render, renderer, scene, camera, cubeCamera, box, directionalLight,
-player, controls, guiparams, container, door, mat1;
+player, controls, guiparams, container, door, mat1, animate;
 var pbox, dbox, mouse = { x: 0, y: 0, z: 0 };
 var initAudio = false;
 
 var sphereMaterial = new THREE.MeshBasicMaterial({color: 0x333333});
 var wireMat = new THREE.MeshBasicMaterial({ color: 0x888888, wireframe: true });
 var clock = new THREE.Clock();
+
+// FBXLoader variables
+var mixers = [];
+var model, stats;
+var animations_zombie = [];
+
+// Load animations
+var zombie_loader = new THREE.FBXLoader();
+zombie_loader.load( 'assets/zombieIdle.FBX', function ( object ) {
+  animations_zombie.push(object.animations[ 0 ]);
+
+});
+zombie_loader.load( 'assets/zombieAttack.FBX', function ( object ) {
+
+  animations_zombie.push(object.animations[ 0 ]);
+
+});
+zombie_loader.load( 'assets/zombieDeath.FBX', function ( object ) {
+
+  animations_zombie.push(object.animations[ 0 ]);
+
+});
 
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
@@ -35,6 +57,57 @@ BULLETMOVESPEED = MOVESPEED * 15,
 BULLETMOVESPEEDENEMY = MOVESPEED * 2,
 NUMAI = 5,
 PROJECTILEDAMAGE = 20;
+
+function create_zombie() {
+
+  zombie_loader.load( 'assets/zombieWalk.FBX', function ( object ) {
+
+    model = object;
+    object.mixer = new THREE.AnimationMixer( object );
+    mixers.push( object.mixer );
+
+    for(var i=0; i<animations_zombie.length; i++)
+    {
+      object.animations.push(animations_zombie[i]);
+    }
+
+    /*
+      Action 0: Walk
+      Action 1: Death
+      Action 2: Attack
+      Action 3: Idle
+    */
+    var action = model.mixer.clipAction( object.animations[ 1 ] );
+    action.play();
+
+    var textureLoader = new THREE.TextureLoader();
+    textureLoader.setCrossOrigin("anonymous");
+    textureLoader.load("assets/Zombie.png", function (texture) {
+
+    object.traverse( function ( child ) {
+
+      if ( child.isMesh ) {
+
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.material.map = texture
+        child.material.needsUpdate = true;
+
+      }
+
+      } );
+
+    model.scale.x = 0.007;
+    model.scale.y = 0.007;
+    model.scale.z = 0.007;
+
+    scene.add( object );
+
+      } );
+
+  });
+
+}
 
 function crosshair(camera) {
 
@@ -302,6 +375,8 @@ function initScene() {
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
   var audioContext = new AudioContext();
 
+  create_zombie();
+
   // FIX AUDIO FOR CHROME
   document.addEventListener('click', resumeAudioContext(audioContext), false);
 
@@ -309,6 +384,10 @@ function initScene() {
   renderer.setSize( window.innerWidth, window.innerHeight );
   container = document.getElementById( 'webGL' )
   container.appendChild( renderer.domElement );
+
+  //Stats
+  stats = new Stats();
+  container.appendChild( stats.dom );
 
   // renderer.setPixelRatio( window.devicePixelRatio );
   // console.log("Pixel ratio: " + window.devicePixelRatio);
@@ -382,6 +461,7 @@ function initScene() {
 
   scene.simulate(); // run physics
   requestAnimationFrame( render );
+  requestAnimationFrame( animate );
 };
 
 function render() {
@@ -395,8 +475,33 @@ function render() {
   // render scene
   cubeCamera.update( renderer, scene );
 
+  // Zombie animations
+  // if ( mixers.length > 0 ) {
+  //   for ( var i = 0; i < mixers.length; i ++ ) {
+  //     mixers[ i ].update( delta );
+  //   }
+  // }
+
   renderer.render( scene, camera); // render the scene
 
+  // stats.update();
+
 };
+
+function animate() {
+
+  requestAnimationFrame( animate );
+
+  if ( mixers.length > 0 ) {
+    for ( var i = 0; i < mixers.length; i ++ ) {
+      mixers[ i ].update( clock.getDelta() );
+    }
+  }
+
+  renderer.render( scene, camera );
+
+  stats.update();
+
+}
 
 window.onload = initScene;
