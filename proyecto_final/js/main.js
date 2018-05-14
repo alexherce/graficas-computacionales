@@ -478,7 +478,7 @@ function initScene() {
   scene = new Physijs.Scene;
   scene.setGravity(new THREE.Vector3(0,-30,0));
 
-  // scene.fog = new THREE.Fog( 0x000000, 0, 1000 );
+  scene.fog = new THREE.Fog( 0x000000, 0, 800 );
   // scene.fog.color.setHSL( 0.51, 0.6, 0.6 );
   // scene.background = new THREE.Color( 0xffffff );
 
@@ -515,7 +515,7 @@ function initScene() {
 
   document.addEventListener('click', playerShoot, false );
 
-  camera =  new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 10000 );
+  camera =  new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
   camera.position.set(0, 17.5, 0);
   camera.lookAt(scene.position);
 
