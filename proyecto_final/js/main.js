@@ -684,9 +684,8 @@ function render() {
   if(!gameOver) {
     update();
     renderer.render( scene, camera);
-    requestAnimationFrame( render );
   }
-
+  requestAnimationFrame( render );
 };
 
 function restart() {
@@ -704,6 +703,7 @@ function clearScene() {
   {
     scene.remove(zombies[zx].zombie);
   }
+  zombies = [];
 }
 
 window.onload = initScene;
