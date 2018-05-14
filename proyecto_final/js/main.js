@@ -39,19 +39,15 @@ var animations_zombie = [];
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
 var map = [
-  // 0  1  2  3  4  5  6  7  8  9 10  11
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // 0
-  [1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1], // 1
-  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 2
-  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 3
-  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 4
-  [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], // 5
-  [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], // 6
-  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 7
-  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 8
-  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 9
-  [1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1], // 10
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // 11
+// 0  1  2  3  4  5  6  7
+  [1, 1, 1, 1, 1, 1, 1, 1], // 0
+  [1, 1, 1, 1, 2, 1, 1, 1], // 1
+  [1, 1, 0, 0, 0, 0, 1, 1], // 2
+  [1, 1, 0, 0, 0, 0, 1, 1], // 3
+  [1, 2, 0, 0, 0, 0, 2, 1], // 4
+  [1, 1, 0, 0, 0, 0, 1, 1], // 5
+  [1, 1, 1, 1, 2, 1, 1, 1], // 6
+  [1, 1, 1, 1, 1, 1, 1, 1], // 7
 ], mapW = map.length, mapH = map[0].length;
 
 // Semi-constants
@@ -103,26 +99,19 @@ function create_zombie(modelPar) {
     object.position.y = -21;
     object.position.z = 0;
 
+    object.mixer = new THREE.AnimationMixer( object );
+    let action = object.mixer.clipAction(animations_zombie[3]);
+    action.play();
+
     let zombie = new Physijs.CylinderMesh(
       new THREE.CylinderGeometry(7, 7, 40, 10),
-      Physijs.createMaterial(
-        new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true}),
-        2, // friction
-        0 // restitution
-      )
+      Physijs.createMaterial(new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true}), 2, 0),
+      1000
     );
 
     zombie.add(object);
 
     zombie.health = 100;
-
-    zombie.children[0].mixer = new THREE.AnimationMixer( zombie.children[0] );
-    mixers.push( zombie.children[0].mixer );
-
-    let action = zombie.children[0].mixer.clipAction(zombie.children[0].animations[0]);
-    action.play();
-
-    console.log(zombie);
 
     zombie.name = 'zombie';
     zombie.material.visible = false;
@@ -140,8 +129,9 @@ function create_zombie(modelPar) {
     zombie.setAngularFactor(new THREE.Vector3(0,0,0));
     zombies.push({
       zombie: zombie,
-      walking: true,
-      speed: getRndInt(20, 50)
+      walking: false,
+      speed: getRndInt(20, 50),
+      mixer: object.mixer
     });
   });
 }
@@ -524,7 +514,7 @@ function initScene() {
   player.name = 'player'
   player.position.y = 30;
   player.position.x = 0;
-  player.position.z = -1000;
+  player.position.z = 0;
   player.add(camera);
   scene.add(player);
   player.setAngularFactor(new THREE.Vector3(0,0,0));
@@ -546,11 +536,6 @@ function initScene() {
     controls.setAudioContext(audioContext).startOn(container, false);
   }
 
-  // CUBE CAMERA
-  cubeCamera = new THREE.CubeCamera( 1, 100000, 512 );
-  scene.add( cubeCamera );
-  cubeCamera.renderTarget.texture.format = THREE.RGBFormat;
-
   // LOAD ZOMBIE ANIMATIONS
   try {
     zombie_loader = new THREE.FBXLoader(loadingManager);
@@ -569,6 +554,16 @@ function initScene() {
 
             zombie_loader.load( 'assets/Zombie3_Walk.FBX', function ( object ) {
               animations_zombie.push(object.animations[ 0 ]);
+
+              try {
+                // SETUP WORLD
+                setupWorld();
+              } finally {
+                create_zombie(3);
+                animate();
+                render();
+                updateUser();
+              }
             });
           });
         });
@@ -577,15 +572,13 @@ function initScene() {
   } catch(e) {
     console.log(e);
   }
-
-  try {
-    // SETUP WORLD
-    setupWorld();
-  } finally {
-    create_zombie(3);
-    requestAnimationFrame( render );
-  }
 };
+
+function spawn_zombies(num) {
+  for(var i = 0; i < num; i++) {
+    create_zombie(3);
+  }
+}
 
 function update() {
   if(zombies.length > 0) {
@@ -625,28 +618,35 @@ function update() {
         action.play();
       }
     }
-
-    var time = performance.now();
-    var delta = ( time - lastSpawn ) / 1000;
-
-    if(delta > nextSpawn) {
-      lastSpawn = performance.now();
-      nextSpawn = getRndInt(20, 40);
-      // create_zombie(3);
-    }
     sequence++;
+  }
+
+  var time = performance.now();
+  var delta = ( time - lastSpawn ) / 1000;
+
+  if(delta > nextSpawn) {
+    lastSpawn = performance.now();
+    nextSpawn = getRndInt(10, 30);
+    create_zombie(3);
   }
 }
 
-function animate() {
+function updateUser() {
+  requestAnimationFrame( updateUser );
+  var dt = clock.getDelta();
+  if (dt > 0.05) dt = 0.05;
+  scene.simulate();
+  controls.updatePhys(dt);
+}
 
-  // requestAnimationFrame( animate );
-  if ( mixers.length > 0 ) {
-    for ( var i = 0; i < mixers.length; i ++ ) {
-      mixers[ i ].update( clock.getDelta() );
+function animate() {
+  requestAnimationFrame( animate );
+  var time = clock.getDelta();
+  if ( zombies.length > 0 ) {
+    for ( var i = 0; i < zombies.length; i ++ ) {
+      zombies[i].mixer.update(time);
     }
   }
-  stats.update();
 }
 
 function render() {
@@ -659,22 +659,11 @@ function render() {
     return; // Stop the function here.
   }
 
-  requestAnimationFrame( render );
-
-  var dt = clock.getDelta();
-  if (dt > 0.05) dt = 0.05;
-  scene.simulate();
-  controls.updatePhys(dt);
-
-  cubeCamera.position.copy( {x:player.position.x, y:-67 - player.position.y  , z:player.position.z} );
-
-  // render scene
-  cubeCamera.update( renderer, scene );
-
-  animate();
   update();
 
   renderer.render( scene, camera);
+
+  requestAnimationFrame( render );
 };
 
 window.onload = initScene;
