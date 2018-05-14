@@ -39,6 +39,7 @@ var animations_zombie = [];
 // Game handler
 var hp = 100;
 var gameOver = false;
+var isReloading = false;
 var pointsDisplay, hpDisplay, bulletsDisplay;
 var score = 0;
 var max_bullets = 30;
@@ -272,8 +273,13 @@ async function playerShoot( event ) {
     shootBullet();
     bullets -= 1;
   }else{
-    await sleep(3000);
-    bullets = max_bullets;
+    if(isReloading == false)
+    {
+      isReloading = true;
+      await sleep(3000);
+      bullets = max_bullets;
+      isReloading = false;
+    }
   }
 }
 
