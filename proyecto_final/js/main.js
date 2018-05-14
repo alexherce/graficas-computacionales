@@ -587,7 +587,7 @@ function spawn_zombies(num) {
 }
 
 function update() {
-  if(zombies.length > 0) {
+  if(zombies.length > 0 && !gameOver) {
 
     // VALUE FOR ZOMBIE ATTACK WAIT (IN FRAMES PER SECOND)
     if (sequence > 120) sequence = 0;
@@ -631,12 +631,14 @@ function update() {
   var time = performance.now();
   var delta = ( time - lastSpawn ) / 1000;
 
-  if(delta > nextSpawn) {
+  if(delta > nextSpawn && !gameOver) {
     lastSpawn = performance.now();
     nextSpawn = getRndInt(10, 30);
     create_zombie(3);
   }
+
   pointsDisplay.innerHTML = score;
+
   if(hp<=0) {
     gameOver = true;
     document.getElementById("menu").style.display = "block";
@@ -649,8 +651,7 @@ function update() {
 
 function updateUser() {
   requestAnimationFrame( updateUser );
-  if(gameOver == false)
-  {
+  if(!gameOver) {
     var dt = clock.getDelta();
     if (dt > 0.05) dt = 0.05;
     scene.simulate();
@@ -660,10 +661,12 @@ function updateUser() {
 
 function animate() {
   requestAnimationFrame( animate );
-  var time = clock.getDelta();
-  if ( zombies.length > 0 ) {
-    for ( var i = 0; i < zombies.length; i ++ ) {
-      zombies[i].mixer.update(time);
+  if(!gameOver) {
+    var time = clock.getDelta();
+    if ( zombies.length > 0 ) {
+      for ( var i = 0; i < zombies.length; i ++ ) {
+        zombies[i].mixer.update(time);
+      }
     }
   }
 }
@@ -678,11 +681,12 @@ function render() {
     return; // Stop the function here.
   }
 
-  update();
+  if(!gameOver) {
+    update();
+    renderer.render( scene, camera);
+    requestAnimationFrame( render );
+  }
 
-  renderer.render( scene, camera);
-
-  requestAnimationFrame( render );
 };
 
 function restart() {
