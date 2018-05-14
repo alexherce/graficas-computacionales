@@ -39,7 +39,7 @@ var animations_zombie = [];
 // Game handler
 var hp = 100;
 var gameOver = false;
-var pointsDisplay;
+var pointsDisplay, hpDisplay;
 var score = 0;
 
 // 0's is where user can walk
@@ -441,6 +441,7 @@ function initScene() {
   gameOver = false;
 
   pointsDisplay = document.getElementById("points");
+  hpDisplay = document.getElementById("hp");
 
   // FIX AUDIO FOR CHROME
   // document.addEventListener('click', resumeAudioContext(audioContext), false);
@@ -638,8 +639,10 @@ function update() {
   }
 
   pointsDisplay.innerHTML = score;
+  hpDisplay.innerHTML = hp;
 
   if(hp<=0) {
+    hp=0;
     gameOver = true;
     document.getElementById("menu").style.display = "block";
     document.getElementById("play_button").addEventListener('click', function (event) {
