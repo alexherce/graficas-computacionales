@@ -36,6 +36,12 @@ var mixers = [];
 var model, stats;
 var animations_zombie = [];
 
+// Game handler
+var hp = 5;
+var gameOver = false;
+var pointsDisplay;
+var score = 0;
+
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
 var map = [
@@ -130,7 +136,7 @@ function create_zombie(modelPar) {
     zombies.push({
       zombie: zombie,
       walking: false,
-      speed: getRndInt(20, 50),
+      speed: getRndInt(50, 100),
       mixer: object.mixer
     });
   });
@@ -344,6 +350,7 @@ function collisionDetection(obj, otherObject, relativeVelocity, relativeRotation
   }
 
   if(obj.name == "player" && otherObject.name == "zombie") {
+    hp -= getRndInt(5,10);
     console.log("zombie hit player");
   }
 
@@ -361,6 +368,7 @@ function collisionDetection(obj, otherObject, relativeVelocity, relativeRotation
       let objIndex = zombies.findIndex(x => x.zombie.id == obj.id);
       console.log(objIndex);
       zombies.splice(objIndex, 1);
+      score += 1;
       scene.remove(obj);
     }
   }
@@ -435,6 +443,9 @@ function setupWorld() {
 
 function initScene() {
   var audioContext;
+  gameOver = false;
+
+  pointsDisplay = document.getElementById("points");
 
   // FIX AUDIO FOR CHROME
   // document.addEventListener('click', resumeAudioContext(audioContext), false);
@@ -629,14 +640,26 @@ function update() {
     nextSpawn = getRndInt(10, 30);
     create_zombie(3);
   }
+  pointsDisplay.innerHTML = score;
+  if(hp<=0) {
+    gameOver = true;
+    document.getElementById("menu").style.display = "block";
+    document.getElementById("play_button").addEventListener('click', function (event) {
+      event.preventDefault();
+      restart();
+    });
+  }
 }
 
 function updateUser() {
   requestAnimationFrame( updateUser );
-  var dt = clock.getDelta();
-  if (dt > 0.05) dt = 0.05;
-  scene.simulate();
-  controls.updatePhys(dt);
+  if(gameOver == false)
+  {
+    var dt = clock.getDelta();
+    if (dt > 0.05) dt = 0.05;
+    scene.simulate();
+    controls.updatePhys(dt);
+  }
 }
 
 function animate() {
@@ -665,5 +688,22 @@ function render() {
 
   requestAnimationFrame( render );
 };
+
+function restart() {
+  document.getElementById("menu").style.display = "none";
+  clearScene();
+  player.position.set(0,0,0);
+  player.setAngularFactor(new THREE.Vector3(0,0,0));
+  hp = 100
+  gameOver = false;
+  score = 0;
+}
+
+function clearScene() {
+  for(var zx=0; zx<zombies.length; zx++)
+  {
+    scene.remove(zombies[zx].zombie);
+  }
+}
 
 window.onload = initScene;
