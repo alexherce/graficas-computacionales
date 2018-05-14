@@ -37,7 +37,7 @@ var model, stats;
 var animations_zombie = [];
 
 // Game handler
-var hp = 5;
+var hp = 100;
 var gameOver = false;
 var pointsDisplay;
 var score = 0;
