@@ -37,7 +37,7 @@ var model, stats;
 var animations_zombie = [];
 
 // Game handler
-var hp = 5;
+var hp = 100;
 var gameOver = false;
 var pointsDisplay;
 var score = 0;
@@ -58,12 +58,7 @@ var map = [
 
 // Semi-constants
 var UNITSIZE = 400,
-WALLHEIGHT = UNITSIZE / 3,
-MOVESPEED = 50,
-BULLETMOVESPEED = MOVESPEED * 15,
-BULLETMOVESPEEDENEMY = MOVESPEED * 2,
-NUMAI = 5,
-PROJECTILEDAMAGE = 20;
+WALLHEIGHT = UNITSIZE / 3;
 
 function getRndInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1) ) + min;
@@ -350,7 +345,7 @@ function collisionDetection(obj, otherObject, relativeVelocity, relativeRotation
   }
 
   if(obj.name == "player" && otherObject.name == "zombie") {
-    hp -= getRndInt(5,10);
+    // hp -= getRndInt(5,10);
     console.log("zombie hit player");
   }
 
@@ -619,6 +614,7 @@ function update() {
 
       // IF CLOSE TO PLAYER ATTACK IF WAITED 120 FRAMES
       if(zombies[i].zombie.position.distanceTo(player.position) < 25 && sequence == 0) {
+        hp -= getRndInt(5,10);
         console.log("zombie attacked player");
       }
 

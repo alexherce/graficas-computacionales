@@ -572,8 +572,7 @@ THREE.PhysicsFirstPersonControls.prototype.setAudioContext = function (context) 
 	this.bufferLoader.load();
 
 	function finishedLoading(sources) {
-		console.log("finished loading audio files for: ");
-		console.log(sources);
+		
 	}
 
 	return this;
