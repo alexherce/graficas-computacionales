@@ -4,65 +4,54 @@ Physijs.scripts.worker = './js/physijs_worker.js';
 Physijs.scripts.ammo = 'ammo.js';
 
 var initScene, render, renderer, scene, camera, cubeCamera, box, directionalLight,
-player, controls, guiparams, container, door, mat1, animate;
+player, controls, guiparams, container, door, mat1, animate, zombie_loader, zombieOG;
+
 var pbox, dbox, mouse = { x: 0, y: 0, z: 0 };
 var initAudio = false;
+var zombies = [];
+var spawns = [];
+var sequence = 0;
+
+var lastSpawn = 0;
+var nextSpawn = 0;
 
 var sphereMaterial = new THREE.MeshBasicMaterial({color: 0x333333});
 var wireMat = new THREE.MeshBasicMaterial({ color: 0x888888, wireframe: true });
 var clock = new THREE.Clock();
+
+var loadingScreen = {
+  scene: new THREE.Scene(),
+  camera: new THREE.PerspectiveCamera(90, 1280/720, 0.1, 100),
+  box: new THREE.Mesh(
+    new THREE.BoxGeometry(0.1,0.5,0.1),
+    new THREE.MeshBasicMaterial({ color:0x4444ff })
+  )
+};
+
+var loadingManager = null;
+var RESOURCES_LOADED = false;
 
 // FBXLoader variables
 var mixers = [];
 var model, stats;
 var animations_zombie = [];
 
-// Load animations
-var zombie_loader = new THREE.FBXLoader();
-<<<<<<< HEAD
-zombie_loader.load( 'assets/ZombieVintage.FBX', function ( object ) {
-  animations_zombie.push(object.animations[ 0 ]);
-});
-zombie_loader.load( 'assets/ZombieVintageAttack.FBX', function ( object ) {
-  animations_zombie.push(object.animations[ 1 ]);
-=======
-zombie_loader.load( 'assets/Zombie_Idle.FBX', function ( object ) {
-  animations_zombie.push(object.animations[ 1 ]);
-
-});
-zombie_loader.load( 'assets/Zombie_Attack.FBX', function ( object ) {
-
-  animations_zombie.push(object.animations[ 1 ]);
-
-});
-zombie_loader.load( 'assets/Zombie_Death.FBX', function ( object ) {
-
-  animations_zombie.push(object.animations[ 1 ]);
-
-});
-zombie_loader.load( 'assets/Zombie_Running.FBX', function ( object ) {
-
-  animations_zombie.push(object.animations[ 1 ]);
-
->>>>>>> 1b588a7552c76fd4b4b7352cb49991580f5833f9
-});
-// zombie_loader.load( 'assets/zombieDeath.FBX', function ( object ) {
-//   animations_zombie.push(object.animations[ 0 ]);
-// });
-
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
-var map = [ // 1  2  3  4  5  6  7  8  9
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 0
-  [1, 1, 0, 0, 0, 0, 0, 1, 1, 1,], // 1
-  [1, 1, 0, 0, 2, 0, 0, 0, 0, 1,], // 2
-  [1, 0, 0, 0, 0, 2, 0, 0, 0, 1,], // 3
-  [1, 0, 0, 2, 0, 0, 2, 0, 0, 1,], // 4
-  [1, 0, 0, 0, 2, 0, 0, 0, 1, 1,], // 5
-  [1, 1, 1, 0, 0, 0, 0, 1, 1, 1,], // 6
-  [1, 1, 1, 0, 0, 1, 0, 0, 1, 1,], // 7
-  [1, 1, 1, 1, 1, 1, 0, 0, 1, 1,], // 8
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 9
+var map = [
+  // 0  1  2  3  4  5  6  7  8  9 10  11
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // 0
+  [1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1], // 1
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 2
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 3
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 4
+  [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], // 5
+  [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1], // 6
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 7
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 8
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], // 9
+  [1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1], // 10
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // 11
 ], mapW = map.length, mapH = map[0].length;
 
 // Semi-constants
@@ -74,85 +63,87 @@ BULLETMOVESPEEDENEMY = MOVESPEED * 2,
 NUMAI = 5,
 PROJECTILEDAMAGE = 20;
 
-function create_zombie() {
-
-<<<<<<< HEAD
-  zombie_loader.load( 'assets/ZombieVintage.FBX', function ( object ) {
-=======
-  zombie_loader.load( 'assets/Zombie2_Walk.FBX', function ( object ) {
->>>>>>> 1b588a7552c76fd4b4b7352cb49991580f5833f9
-
-    model = object;
-    object.mixer = new THREE.AnimationMixer( object );
-    mixers.push( object.mixer );
-
-    for(var i=0; i<animations_zombie.length; i++)
-    {
-      object.animations.push(animations_zombie[i]);
-    }
-
-<<<<<<< HEAD
-    var action = model.mixer.clipAction(object.animations[ 0 ]);
-    action.play();
-
-    scene.add( object );
-  });
+function getRndInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) ) + min;
 }
 
-function create_zombie2() {
-  var loader = new THREE.FBXLoader();
-  loader.load( 'assets/ZombieVintageAttack.fbx', function ( object ) {
+function load_zombie(modelPar) {
 
-    object.mixer = new THREE.AnimationMixer( object );
-    mixers.push( object.mixer );
+  var model = 'assets/Zombie_Walk.fbx';
 
-    for(var i=0; i<animations_zombie.length; i++)
-    {
-      object.animations.push(animations_zombie[i]);
-    }
+  if(modelPar == 2) {
+    model = 'assets/Zombie2_Walk.fbx';
+  } else if (modelPar == 3) {
+    model = 'assets/Zombie3_Walk.fbx';
+  }
 
-    var action = object.mixer.clipAction( object.animations[ 2 ] );
-    action.play();
+  zombie_loader.load( model, function ( object ) {
 
-    object.traverse( function ( child ) {
-      if ( child.isMesh ) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-    object.position.y=10;
     object.scale.x = 0.2;
     object.scale.y = 0.2;
     object.scale.z = 0.2;
-    console.log(object);
-    scene.add( object );
-  }, function ( xhr ) {
-    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-  },
-  // called when loading has errors
-  function ( error ) {
-    console.log( 'An error happened: ' + error );
+
+    object.position.x = 0;
+    object.position.y = -21;
+    object.position.z = 0;
+
+    zombieOG = object;
   });
-=======
-    /*
-      Action 0: Walk
-      Action 1: Nothing
-      Action 2: Idle
-      Action 3: Attack
-      Action 4: Death
-      Action 5: Running
-    */
-    var action = model.mixer.clipAction( object.animations[ 0 ] );
+}
+
+function create_zombie(modelPar) {
+
+  let loader = new THREE.FBXLoader();
+  loader.load( 'assets/Zombie3_Walk.fbx', function ( object ) {
+    object.scale.x = 0.2;
+    object.scale.y = 0.2;
+    object.scale.z = 0.2;
+
+    object.position.x = 0;
+    object.position.y = -21;
+    object.position.z = 0;
+
+    let zombie = new Physijs.CylinderMesh(
+      new THREE.CylinderGeometry(7, 7, 40, 10),
+      Physijs.createMaterial(
+        new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true}),
+        2, // friction
+        0 // restitution
+      )
+    );
+
+    zombie.add(object);
+
+    zombie.health = 100;
+
+    zombie.children[0].mixer = new THREE.AnimationMixer( zombie.children[0] );
+    mixers.push( zombie.children[0].mixer );
+
+    let action = zombie.children[0].mixer.clipAction(zombie.children[0].animations[0]);
     action.play();
 
-    model.scale.x = 0.25;
-    model.scale.y = 0.25;
-    model.scale.z = 0.25;
+    console.log(zombie);
 
-    scene.add( object );
+    zombie.name = 'zombie';
+    zombie.material.visible = false;
 
-      });
->>>>>>> 1b588a7552c76fd4b4b7352cb49991580f5833f9
+    zombie.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
+      collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
+    });
+
+    // RANDOM PLACE TO SPAWN
+    let rand = getRndInt(0, spawns.length-1);
+    zombie.position.copy(spawns[rand].position);
+    console.log(zombie.position);
+
+    scene.add(zombie);
+    zombie.setAngularFactor(new THREE.Vector3(0,0,0));
+    zombies.push({
+      zombie: zombie,
+      walking: true,
+      speed: getRndInt(20, 50)
+    });
+  });
 }
 
 function crosshair(camera) {
@@ -219,8 +210,8 @@ function crosshair(camera) {
 
 function gun(camera) {
   // instantiate a loader
-  var texture = new THREE.TGALoader().load('assets/launcher.tga');
-  var loader = new THREE.OBJLoader();
+  var texture = new THREE.TGALoader(loadingManager).load('assets/launcher.tga');
+  var loader = new THREE.OBJLoader(loadingManager);
 
   // load a resource
   loader.load(
@@ -353,21 +344,43 @@ function onWindowResize() {
   renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
+function collisionDetection(obj, otherObject, relativeVelocity, relativeRotation, contactNormal) {
+  if(obj.name == "floor" && otherObject.name == "bullet") {
+    scene.remove(otherObject);
+  }
+
+  if(obj.name == "wall" && otherObject.name == "bullet") {
+    scene.remove(otherObject);
+  }
+
+  if(obj.name == "player" && otherObject.name == "zombie") {
+    console.log("zombie hit player");
+  }
+
+  if(obj.name == "zombie" && otherObject.name == "bullet") {
+    console.log("bullet hit zombie");
+
+    // REMOVE BULLET
+    scene.remove(otherObject);
+
+    // DAMAGE TO ZOMBIE
+    obj.health -= 20;
+
+    // KILL ZOMBIE
+    if(obj.health <= 0) {
+      let objIndex = zombies.findIndex(x => x.zombie.id == obj.id);
+      console.log(objIndex);
+      zombies.splice(objIndex, 1);
+      scene.remove(obj);
+    }
+  }
+}
+
 // -------------------------------
 
 // Set up the objects in the world
 function setupWorld() {
   var units = mapW;
-
-  // Geometry: floor
-
-  // var floor = new t.Mesh(
-  //   new t.PlaneGeometry(units * UNITSIZE, units * UNITSIZE, 100, 100),
-  //   new t.MeshLambertMaterial({color: 0xEDCBA0})
-  // );
-  //
-  // floor.rotation.x = -Math.PI / 2;
-  // scene.add(floor);
 
   var floorMat = new THREE.MeshPhongMaterial({color: 0xEDCBA0});
   var floor = new Physijs.BoxMesh(
@@ -375,9 +388,10 @@ function setupWorld() {
     new Physijs.createMaterial( floorMat, 4, 0.5 ),
     0
   );
-  // floor.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
-  //   collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
-  // });
+
+  floor.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
+    collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
+  });
 
   floor.name = "floor";
   scene.add(floor);
@@ -385,24 +399,36 @@ function setupWorld() {
   // Geometry: walls
   var cube = new THREE.CubeGeometry(UNITSIZE, WALLHEIGHT, UNITSIZE);
   var materials = [
-    new THREE.MeshLambertMaterial({map: new THREE.TextureLoader().load('assets/hull.png')}),
-    new THREE.MeshLambertMaterial({map: new THREE.TextureLoader().load('assets/hull_2.jpg')}),
+    new THREE.MeshLambertMaterial({map: new THREE.TextureLoader(loadingManager).load('assets/hull.png')}),
+    new THREE.MeshLambertMaterial({map: new THREE.TextureLoader(loadingManager).load('assets/hull_2.jpg')}),
     new THREE.MeshLambertMaterial({color: 0xFBEBCD}),
   ];
 
   for (var i = 0; i < mapW; i++) {
     for (var j = 0, m = map[i].length; j < m; j++) {
-      if (map[i][j]) {
+      if (map[i][j] == 1) {
         var wall = new Physijs.BoxMesh(cube, materials[map[i][j]-1], 0);
         wall.position.x = (i - units/2) * UNITSIZE;
         wall.position.y = WALLHEIGHT/2;
         wall.position.z = (j - units/2) * UNITSIZE;
-
-        // wall.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
-        //   collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
-        // });
-
         wall.name = "wall";
+
+        wall.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
+          collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
+        });
+
+        scene.add(wall);
+      }
+
+      if (map[i][j] == 2) {
+        var wall = new THREE.Mesh(cube, wireMat, 0);
+        wall.position.x = (i - units/2) * UNITSIZE;
+        wall.position.y = WALLHEIGHT/2;
+        wall.position.z = (j - units/2) * UNITSIZE;
+
+        wall.name = "spawn";
+        wall.material.visible = false;
+        spawns.push(wall);
         scene.add(wall);
       }
     }
@@ -418,11 +444,10 @@ function setupWorld() {
 }
 
 function initScene() {
-  window.AudioContext = window.AudioContext || window.webkitAudioContext;
-  var audioContext = new AudioContext();
+  var audioContext;
 
   // FIX AUDIO FOR CHROME
-  document.addEventListener('click', resumeAudioContext(audioContext), false);
+  // document.addEventListener('click', resumeAudioContext(audioContext), false);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize( window.innerWidth, window.innerHeight );
@@ -444,17 +469,34 @@ function initScene() {
 
   // Physics worker thread
   // This updates on different clock
+  // scene.addEventListener(
+  //   'update',
+  //   function() {
+  //     var dt = clock.getDelta();
+  //     if (dt > 0.05) dt = 0.05;
+  //     scene.simulate(undefined, 2);
+  //     controls.updatePhys(dt);
+  //   }
+  // );
 
-  scene.addEventListener(
-    'update',
-    function() {
-      var dt = clock.getDelta();
-      if (dt > 0.05) dt = 0.05;
-      scene.simulate(undefined, 2);
-      //scene.simulate(null,1);
-      controls.updatePhys(dt);
-    }
-  );
+  // Set up the loading screen's scene.
+  // It can be treated just like our main scene.
+  loadingScreen.box.position.set(0,0,5);
+  loadingScreen.camera.lookAt(loadingScreen.box.position);
+  loadingScreen.scene.add(loadingScreen.box);
+
+  // Create a loading manager to set RESOURCES_LOADED when appropriate.
+  // Pass loadingManager to all resource loaders.
+  loadingManager = new THREE.LoadingManager();
+
+  loadingManager.onProgress = function(item, loaded, total){
+    loadingScreen.box.scale.x = total * 2;
+  };
+
+  loadingManager.onLoad = function(){
+    console.log("loaded all resources");
+    RESOURCES_LOADED = true;
+  };
 
   document.addEventListener('click', playerShoot, false );
 
@@ -465,7 +507,7 @@ function initScene() {
   var light = new THREE.AmbientLight( 0x404040 ); // soft white light
   scene.add( light );
 
-  /*load player colider*/
+  // PLAYER COLLIDER
   player = new Physijs.CapsuleMesh(
     createCapsule(1, 18),
     Physijs.createMaterial(
@@ -479,33 +521,122 @@ function initScene() {
   gun(camera);
 
   player.material.visible = false;
-  player.position.y = 20;
-  player.position.x = 150;
+  player.name = 'player'
+  player.position.y = 30;
+  player.position.x = 0;
+  player.position.z = -1000;
   player.add(camera);
   scene.add(player);
   player.setAngularFactor(new THREE.Vector3(0,0,0));
 
-  /*add controls*/
+  player.addEventListener('collision', function( other_object, relative_velocity, relative_rotation, contact_normal) {
+    collisionDetection(this, other_object, relative_velocity, relative_rotation, contact_normal);
+  });
+
+  // CONTROLS
   controls = new THREE.PhysicsFirstPersonControls(player);
-  controls.setAudioContext(audioContext).startOn(container, false);
+
+  try {
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioContext();
+    audioContext.resume();
+  } catch(e) {
+    console.log(e);
+  } finally {
+    controls.setAudioContext(audioContext).startOn(container, false);
+  }
 
   // CUBE CAMERA
-
   cubeCamera = new THREE.CubeCamera( 1, 100000, 512 );
   scene.add( cubeCamera );
   cubeCamera.renderTarget.texture.format = THREE.RGBFormat;
 
-  // SETUP WORLD
+  // LOAD ZOMBIE ANIMATIONS
+  try {
+    zombie_loader = new THREE.FBXLoader(loadingManager);
 
-  setupWorld();
-  // loadMap();
+    zombie_loader.load( 'assets/Zombie_Idle.FBX', function ( object ) {
+      animations_zombie.push(object.animations[ 1 ]);
 
-  create_zombie2();
+      zombie_loader.load( 'assets/Zombie_Attack.FBX', function ( object ) {
+        animations_zombie.push(object.animations[ 1 ]);
 
-  scene.simulate(); // run physics
-  requestAnimationFrame( render );
-  // requestAnimationFrame( animate );
+        zombie_loader.load( 'assets/Zombie_Death.FBX', function ( object ) {
+          animations_zombie.push(object.animations[ 1 ]);
+
+          zombie_loader.load( 'assets/Zombie_Running.FBX', function ( object ) {
+            animations_zombie.push(object.animations[ 1 ]);
+
+            zombie_loader.load( 'assets/Zombie3_Walk.FBX', function ( object ) {
+              animations_zombie.push(object.animations[ 0 ]);
+            });
+          });
+        });
+      });
+    });
+  } catch(e) {
+    console.log(e);
+  }
+
+  try {
+    // SETUP WORLD
+    setupWorld();
+  } finally {
+    create_zombie(3);
+    requestAnimationFrame( render );
+  }
 };
+
+function update() {
+  if(zombies.length > 0) {
+
+    // VALUE FOR ZOMBIE ATTACK WAIT (IN FRAMES PER SECOND)
+    if (sequence > 120) sequence = 0;
+
+    var pos = new THREE.Vector3();
+    for(var i = 0; i < zombies.length; i++) {
+
+      // ZOMBIE LOOK AT PLAYER
+      zombies[i].zombie.lookAt(player.position);
+
+      // GET PLAYER POSITION, RAYCAST AND MOVE TO PLAYER
+      var vector = player.position.clone();
+      zombies[i].ray = new THREE.Ray(zombies[i].zombie.position, vector.sub(zombies[i].zombie.position).normalize());
+      pos.copy(zombies[i].ray.direction);
+      pos.multiplyScalar(zombies[i].speed);
+      zombies[i].zombie.setLinearVelocity(new THREE.Vector3(pos.x, pos.y, pos.z));
+
+      // IF CLOSE TO PLAYER, ATTACK ANIMATION
+      if(zombies[i].zombie.position.distanceTo(player.position) < 25 && zombies[i].walking == true) {
+        zombies[i].walking = false;
+        var action = zombies[i].zombie.children[0].mixer.clipAction(animations_zombie[1]);
+        action.play();
+      }
+
+      // IF CLOSE TO PLAYER ATTACK IF WAITED 120 FRAMES
+      if(zombies[i].zombie.position.distanceTo(player.position) < 25 && sequence == 0) {
+        console.log("zombie attacked player");
+      }
+
+      // IF FAR TO PLAYER, WALK ANIMATION
+      if(zombies[i].zombie.position.distanceTo(player.position) > 25 && zombies[i].walking == false) {
+        zombies[i].walking = true;
+        var action = zombies[i].zombie.children[0].mixer.clipAction(animations_zombie[3]);
+        action.play();
+      }
+    }
+
+    var time = performance.now();
+    var delta = ( time - lastSpawn ) / 1000;
+
+    if(delta > nextSpawn) {
+      lastSpawn = performance.now();
+      nextSpawn = getRndInt(20, 40);
+      // create_zombie(3);
+    }
+    sequence++;
+  }
+}
 
 function animate() {
 
@@ -520,15 +651,30 @@ function animate() {
 
 function render() {
 
+  // This block runs while resources are loading.
+  if( RESOURCES_LOADED == false ){
+    requestAnimationFrame(render);
+
+    renderer.render(loadingScreen.scene, loadingScreen.camera);
+    return; // Stop the function here.
+  }
+
   requestAnimationFrame( render );
-  var delta = clock.getDelta();
+
+  var dt = clock.getDelta();
+  if (dt > 0.05) dt = 0.05;
+  scene.simulate();
+  controls.updatePhys(dt);
+
   cubeCamera.position.copy( {x:player.position.x, y:-67 - player.position.y  , z:player.position.z} );
 
   // render scene
   cubeCamera.update( renderer, scene );
 
-  renderer.render( scene, camera); // render the scene
   animate();
+  update();
+
+  renderer.render( scene, camera);
 };
 
 window.onload = initScene;
