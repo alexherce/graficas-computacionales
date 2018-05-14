@@ -39,8 +39,10 @@ var animations_zombie = [];
 // Game handler
 var hp = 100;
 var gameOver = false;
-var pointsDisplay, hpDisplay;
+var pointsDisplay, hpDisplay, bulletsDisplay;
 var score = 0;
+var max_bullets = 30;
+var bullets;
 
 // 0's is where user can walk
 // 1 & 2 are textures for the wall
@@ -264,8 +266,15 @@ function createCapsule(width, height) {
   return merged;
 }
 
-function playerShoot( event ) {
-  shootBullet();
+async function playerShoot( event ) {
+  if(bullets > 0)
+  {
+    shootBullet();
+    bullets -= 1;
+  }else{
+    await sleep(3000);
+    bullets = max_bullets;
+  }
 }
 
 function resumeAudioContext(context) {
@@ -442,6 +451,9 @@ function initScene() {
 
   pointsDisplay = document.getElementById("points");
   hpDisplay = document.getElementById("hp");
+  bulletsDisplay = document.getElementById("bullets");
+
+  bullets = max_bullets;
 
   // FIX AUDIO FOR CHROME
   // document.addEventListener('click', resumeAudioContext(audioContext), false);
@@ -640,6 +652,7 @@ function update() {
 
   pointsDisplay.innerHTML = score;
   hpDisplay.innerHTML = hp;
+  bulletsDisplay.innerHTML = bullets;
 
   if(hp<=0) {
     hp=0;
@@ -707,6 +720,10 @@ function clearScene() {
     scene.remove(zombies[zx].zombie);
   }
   zombies = [];
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 window.onload = initScene;
